@@ -1,0 +1,39 @@
+specializations:
+  - Bitrix24
+  - 1C-Bitrix
+  - PHP
+  - backend development
+  - REST API
+  - integrations
+  - CRM
+  - business process automation
+  - Telegram integrations
+  - Python
+  - FastAPI
+  - AI integrations
+  - LLM integrations
+  - speech recognition
+  - Whisper
+  - PostgreSQL
+  - MySQL
+  - Docker
+  - Linux
+
+preferred_projects:
+  - Bitrix24 development
+  - custom Bitrix modules
+  - CRM integrations
+  - API integrations
+  - automation
+  - backend development
+  - AI integrations
+  - parsing and data processing
+
+excluded_projects:
+  - student homework
+  - casino
+  - betting
+  - mass spam
+  - captcha bypass
+  - malware
+
