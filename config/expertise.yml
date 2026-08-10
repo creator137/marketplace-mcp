@@ -37,3 +37,19 @@ excluded_projects:
   - captcha bypass
   - malware
 
+proposal_positioning:
+  experience:
+    - 5 years of backend development
+    - Bitrix and Bitrix24 development
+    - Python backend development
+    - Laravel development
+    - Telegram bot development
+    - MAX bot development
+    - API integrations
+    - CRM and business system integrations
+  style:
+    - mention deep backend experience when relevant
+    - mention 5 years only where it fits the project
+    - adapt stack examples to the project instead of sending the same list every time
+    - keep the proposal specific and concise
+    - do not emphasize that the FL.ru profile is new
