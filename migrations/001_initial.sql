@@ -41,3 +41,21 @@ CREATE TABLE IF NOT EXISTS submitted_proposals (
     submitted_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS avito_ad_drafts (
+    draft_id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    category TEXT,
+    price INTEGER,
+    location TEXT,
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS avito_published_ads (
+    draft_id TEXT PRIMARY KEY,
+    avito_item_id TEXT,
+    url TEXT,
+    payload_json TEXT NOT NULL,
+    published_at TEXT NOT NULL
+);

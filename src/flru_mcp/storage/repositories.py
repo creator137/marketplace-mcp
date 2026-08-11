@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -104,3 +105,68 @@ class HistoryRepository:
         )
         self.con.execute("UPDATE projects SET submitted=1 WHERE project_id=?", (project_id,))
         self.con.commit()
+
+    def save_avito_draft(self, payload: dict[str, Any], draft_id: str | None = None) -> dict[str, Any]:
+        now = now_iso()
+        resolved_id = draft_id or f"avito-{uuid.uuid4().hex[:12]}"
+        self.con.execute(
+            """
+            INSERT INTO avito_ad_drafts(draft_id, title, category, price, location, payload_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(draft_id) DO UPDATE SET
+                title=excluded.title,
+                category=excluded.category,
+                price=excluded.price,
+                location=excluded.location,
+                payload_json=excluded.payload_json,
+                updated_at=excluded.updated_at
+            """,
+            (
+                resolved_id,
+                payload.get("title") or "",
+                payload.get("category"),
+                payload.get("price"),
+                payload.get("location"),
+                json.dumps(payload, ensure_ascii=False),
+                now,
+                now,
+            ),
+        )
+        self.con.commit()
+        return self.get_avito_draft(resolved_id) or {"draft_id": resolved_id}
+
+    def get_avito_draft(self, draft_id: str) -> dict[str, Any] | None:
+        row = self.con.execute("SELECT * FROM avito_ad_drafts WHERE draft_id=?", (draft_id,)).fetchone()
+        if not row:
+            return None
+        data = dict(row)
+        data["payload"] = json.loads(data.pop("payload_json"))
+        return data
+
+    def list_avito_drafts(self, limit: int = 50) -> list[dict[str, Any]]:
+        rows = self.con.execute("SELECT * FROM avito_ad_drafts ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
+        drafts = []
+        for row in rows:
+            data = dict(row)
+            data["payload"] = json.loads(data.pop("payload_json"))
+            drafts.append(data)
+        return drafts
+
+    def record_avito_publication(self, draft_id: str, payload: dict[str, Any], avito_item_id: str | None, url: str | None) -> None:
+        self.con.execute(
+            """
+            INSERT INTO avito_published_ads(draft_id, avito_item_id, url, payload_json, published_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(draft_id) DO UPDATE SET
+                avito_item_id=excluded.avito_item_id,
+                url=excluded.url,
+                payload_json=excluded.payload_json,
+                published_at=excluded.published_at
+            """,
+            (draft_id, avito_item_id, url, json.dumps(payload, ensure_ascii=False), now_iso()),
+        )
+        self.con.commit()
+
+    def has_published_avito_draft(self, draft_id: str) -> bool:
+        row = self.con.execute("SELECT 1 FROM avito_published_ads WHERE draft_id=?", (draft_id,)).fetchone()
+        return bool(row)

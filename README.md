@@ -32,6 +32,13 @@ Important defaults:
 - `FLRU_DATABASE=./data/flru_mcp.sqlite3`
 - `FLRU_EXPERTISE_PROFILE=./config/expertise.yml`
 
+Avito defaults:
+
+- `AVITO_DRY_RUN=true`
+- `AVITO_BROWSER_PROFILE=./data/avito-browser-profile`
+- `AVITO_STORAGE_STATE=./data/avito_storage_state.json`
+- `AVITO_CLIENT_ID=` and `AVITO_CLIENT_SECRET=` are optional, but required for official API calls.
+
 ## First Authentication
 
 FL.ru login currently shows Yandex SmartCaptcha. The server does not bypass it.
@@ -47,7 +54,7 @@ Playwright opens FL.ru login. Complete login and any CAPTCHA/2FA manually. The r
 ## Launch MCP Server
 
 ```bash
-uv run flru-mcp
+uv run marketplace-mcp
 ```
 
 Codex MCP configuration example:
@@ -57,8 +64,8 @@ Codex MCP configuration example:
   "mcpServers": {
     "flru": {
       "command": "uv",
-      "args": ["run", "flru-mcp"],
-      "cwd": "/home/stepanov-sv/projects/fl.ru",
+      "args": ["run", "marketplace-mcp"],
+      "cwd": "/home/stepanov-sv/projects/marketplace-mcp",
       "env": {
         "FLRU_DRY_RUN": "true"
       }
@@ -68,6 +75,8 @@ Codex MCP configuration example:
 ```
 
 ## Tools
+
+FL.ru:
 
 - `flru_auth_status`
 - `flru_login`
@@ -87,7 +96,43 @@ Codex MCP configuration example:
 - `flru_get_conversation`
 - `flru_send_message`
 
+Avito:
+
+- `avito_auth_status`
+- `avito_login`
+- `avito_list_my_ads`
+- `avito_get_ad`
+- `avito_create_ad_draft`
+- `avito_get_ad_draft`
+- `avito_list_ad_drafts`
+- `avito_open_create_ad_page`
+- `avito_publish_ad`
+
 Message tools currently return `NOT_IMPLEMENTED` until authenticated message endpoints are verified.
+
+## Avito Workflow
+
+Avito support uses the official API where possible and Playwright only for manual browser sessions.
+
+To use API-backed tools, create Avito API credentials in the Avito account/API settings and set:
+
+```env
+AVITO_CLIENT_ID=...
+AVITO_CLIENT_SECRET=...
+```
+
+Then:
+
+```text
+1. avito_auth_status
+2. avito_list_my_ads
+3. avito_create_ad_draft
+4. avito_publish_ad
+```
+
+`avito_publish_ad` returns a dry-run preview while `AVITO_DRY_RUN=true`.
+
+Real automated publication is not enabled yet because Avito returned IP/CAPTCHA protection during research and the authenticated add-item form was not safely verified. Use `avito_open_create_ad_page` to open the human page for manual inspection/completion. The server must not bypass CAPTCHA, IP checks, paid placement, moderation, or other manual verification.
 
 ## Dry-Run Workflow
 

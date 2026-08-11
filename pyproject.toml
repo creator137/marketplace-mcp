@@ -24,6 +24,7 @@ dev = [
 ]
 
 [project.scripts]
+marketplace-mcp = "flru_mcp.server.mcp_server:main"
 flru-mcp = "flru_mcp.server.mcp_server:main"
 flru-scan = "flru_mcp.scan:main"
 

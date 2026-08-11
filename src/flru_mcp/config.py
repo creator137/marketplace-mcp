@@ -38,6 +38,15 @@ class Settings:
     delay_min_ms: int = _int("FLRU_REQUEST_DELAY_MIN_MS", 800)
     delay_max_ms: int = _int("FLRU_REQUEST_DELAY_MAX_MS", 1800)
     http_timeout: int = _int("FLRU_HTTP_TIMEOUT", 30)
+    avito_base_url: str = os.getenv("AVITO_BASE_URL", "https://www.avito.ru").rstrip("/")
+    avito_api_base_url: str = os.getenv("AVITO_API_BASE_URL", "https://api.avito.ru").rstrip("/")
+    avito_client_id: str | None = os.getenv("AVITO_CLIENT_ID") or None
+    avito_client_secret: str | None = os.getenv("AVITO_CLIENT_SECRET") or None
+    avito_user_id: str | None = os.getenv("AVITO_USER_ID") or None
+    avito_browser_profile: Path = Path(os.getenv("AVITO_BROWSER_PROFILE", "./data/avito-browser-profile"))
+    avito_storage_state: Path = Path(os.getenv("AVITO_STORAGE_STATE", "./data/avito_storage_state.json"))
+    avito_dry_run: bool = _bool("AVITO_DRY_RUN", True)
+    avito_headless: bool = _bool("AVITO_HEADLESS", False)
 
     @property
     def debug_dir(self) -> Path:
@@ -48,6 +57,8 @@ def load_settings() -> Settings:
     settings = Settings()
     settings.browser_profile.mkdir(parents=True, exist_ok=True)
     settings.storage_state.parent.mkdir(parents=True, exist_ok=True)
+    settings.avito_browser_profile.mkdir(parents=True, exist_ok=True)
+    settings.avito_storage_state.parent.mkdir(parents=True, exist_ok=True)
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
     if settings.debug:
         settings.debug_dir.mkdir(parents=True, exist_ok=True)
@@ -70,4 +81,3 @@ def load_expertise_profile(path: Path) -> ExpertiseProfile:
         preferred_projects=list(data.get("preferred_projects") or []),
         excluded_projects=list(data.get("excluded_projects") or []),
     )
-

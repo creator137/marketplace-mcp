@@ -6,6 +6,9 @@ from typing import Any
 import structlog
 from mcp.server.fastmcp import FastMCP
 
+from flru_mcp.avito.ads import AvitoAdService
+from flru_mcp.avito.browser import AvitoBrowser
+from flru_mcp.avito.client import AvitoApiClient
 from flru_mcp.config import load_expertise_profile, load_settings
 from flru_mcp.flru.auth import AuthService
 from flru_mcp.flru.browser import FlruBrowser
@@ -33,8 +36,9 @@ auth_service = AuthService(client, FlruBrowser(settings))
 proposal_service = ProposalService(settings, client, project_service, repo)
 message_service = MessageService()
 customer_service = CustomerService(client)
+avito_service = AvitoAdService(settings, AvitoApiClient(settings), AvitoBrowser(settings), repo)
 
-mcp = FastMCP("flru-mcp")
+mcp = FastMCP("marketplace-mcp")
 
 
 def dump(value: Any) -> Any:
@@ -163,6 +167,80 @@ async def flru_send_message(conversation_id: str, text: str) -> dict:
 @mcp.tool()
 async def flru_get_customer(profile_url: str) -> dict:
     return await customer_service.get_customer(profile_url)
+
+
+@mcp.tool()
+async def avito_auth_status() -> dict:
+    """Checks Avito API credentials and local browser-session state."""
+    return await avito_service.auth_status()
+
+
+@mcp.tool()
+async def avito_login(headless: bool = False) -> dict:
+    """Starts a manual Avito browser login session. CAPTCHA or IP checks must be completed by the user."""
+    return await avito_service.login(headless=headless)
+
+
+@mcp.tool()
+async def avito_list_my_ads(limit: int = 50, offset: int = 0, status: str | None = None) -> dict:
+    """Lists current account ads through the official Avito API when API credentials are configured."""
+    return await avito_service.list_my_ads(limit=limit, offset=offset, status=status)
+
+
+@mcp.tool()
+async def avito_get_ad(item_id: str) -> dict:
+    """Gets one Avito ad through the official Avito API."""
+    return await avito_service.get_ad(item_id=item_id)
+
+
+@mcp.tool()
+async def avito_create_ad_draft(
+    title: str,
+    description: str,
+    category: str | None = None,
+    price: int | None = None,
+    location: str | None = None,
+    contact_name: str | None = None,
+    images: list[str] | None = None,
+    params: dict | None = None,
+) -> dict:
+    """Stores an Avito ad draft locally. This does not publish anything."""
+    return avito_service.create_draft(
+        {
+            "title": title,
+            "description": description,
+            "category": category,
+            "price": price,
+            "location": location,
+            "contact_name": contact_name,
+            "images": images or [],
+            "params": params or {},
+        }
+    )
+
+
+@mcp.tool()
+async def avito_get_ad_draft(draft_id: str) -> dict:
+    """Gets a locally stored Avito ad draft."""
+    return avito_service.get_draft(draft_id)
+
+
+@mcp.tool()
+async def avito_list_ad_drafts(limit: int = 50) -> dict:
+    """Lists locally stored Avito ad drafts."""
+    return avito_service.list_drafts(limit=limit)
+
+
+@mcp.tool()
+async def avito_open_create_ad_page(headless: bool = False) -> dict:
+    """Opens Avito's add-item page in a manual browser session for inspection or manual completion."""
+    return await avito_service.open_create_ad_page(headless=headless)
+
+
+@mcp.tool()
+async def avito_publish_ad(draft_id: str, confirm: bool = False) -> dict:
+    """Explicit high-impact action for publishing an Avito draft. Defaults to dry-run and never bypasses Avito checks."""
+    return await avito_service.publish_ad(draft_id=draft_id, confirm=confirm)
 
 
 def main() -> None:
