@@ -1,6 +1,6 @@
-# flru-mcp
+# marketplace-mcp
 
-Local MCP server for working with the FL.ru freelance marketplace. It lets Codex or another MCP client browse projects, inspect details, score relevance, keep local history, save proposal drafts, and preview proposal submission in dry-run mode.
+Local MCP server for working with marketplace and freelance platforms. The current implementation supports FL.ru: Codex or another MCP client can browse projects, inspect details, score relevance, keep local history, save proposal drafts, and preview proposal submission in dry-run mode.
 
 The server is intentionally not an autonomous proposal bot. Sending proposals is a separate tool and defaults to dry-run.
 
@@ -141,4 +141,3 @@ Current tests cover parsers, budgets, project detail extraction, relevance scori
 - FL.ru uses DDoS-Guard; crawling is sequential with respectful delays.
 - Authenticated proposal and message forms were not verified from public research, so real sending is disabled.
 - CSS selectors are isolated in parser functions and documented in `docs/flru-research.md`.
-

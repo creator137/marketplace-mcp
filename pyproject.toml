@@ -1,7 +1,7 @@
 [project]
-name = "flru-mcp"
+name = "marketplace-mcp"
 version = "0.1.0"
-description = "Local MCP server for browsing and analyzing FL.ru freelance projects."
+description = "Local MCP server for marketplace and freelance platform automation, currently focused on FL.ru."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
