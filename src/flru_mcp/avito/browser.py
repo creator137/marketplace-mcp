@@ -22,6 +22,7 @@ class AvitoBrowser:
                 user_data_dir=str(self.settings.avito_browser_profile),
                 headless=browser_headless,
                 viewport={"width": 1365, "height": 900},
+                args=["--no-proxy-server", "--proxy-server=direct://"],
             )
             page = context.pages[0] if context.pages else await context.new_page()
             try:
@@ -58,6 +59,7 @@ class AvitoBrowser:
                 user_data_dir=str(self.settings.avito_browser_profile),
                 headless=browser_headless,
                 viewport={"width": 1365, "height": 900},
+                args=["--no-proxy-server", "--proxy-server=direct://"],
             )
             page = context.pages[0] if context.pages else await context.new_page()
             try:
