@@ -47,6 +47,13 @@ class Settings:
     avito_storage_state: Path = Path(os.getenv("AVITO_STORAGE_STATE", "./data/avito_storage_state.json"))
     avito_dry_run: bool = _bool("AVITO_DRY_RUN", True)
     avito_headless: bool = _bool("AVITO_HEADLESS", False)
+    freelancer_base_url: str = os.getenv("FREELANCER_BASE_URL", "https://www.freelancer.com").rstrip("/")
+    freelancer_login: str | None = os.getenv("FREELANCER_LOGIN") or None
+    freelancer_password: str | None = os.getenv("FREELANCER_PASSWORD") or None
+    freelancer_browser_profile: Path = Path(os.getenv("FREELANCER_BROWSER_PROFILE", "./data/freelancer-browser-profile"))
+    freelancer_storage_state: Path = Path(os.getenv("FREELANCER_STORAGE_STATE", "./data/freelancer_storage_state.json"))
+    freelancer_dry_run: bool = _bool("FREELANCER_DRY_RUN", True)
+    freelancer_headless: bool = _bool("FREELANCER_HEADLESS", False)
 
     @property
     def debug_dir(self) -> Path:
@@ -59,6 +66,8 @@ def load_settings() -> Settings:
     settings.storage_state.parent.mkdir(parents=True, exist_ok=True)
     settings.avito_browser_profile.mkdir(parents=True, exist_ok=True)
     settings.avito_storage_state.parent.mkdir(parents=True, exist_ok=True)
+    settings.freelancer_browser_profile.mkdir(parents=True, exist_ok=True)
+    settings.freelancer_storage_state.parent.mkdir(parents=True, exist_ok=True)
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
     if settings.debug:
         settings.debug_dir.mkdir(parents=True, exist_ok=True)

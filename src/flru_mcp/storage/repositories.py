@@ -170,3 +170,76 @@ class HistoryRepository:
     def has_published_avito_draft(self, draft_id: str) -> bool:
         row = self.con.execute("SELECT 1 FROM avito_published_ads WHERE draft_id=?", (draft_id,)).fetchone()
         return bool(row)
+
+    def upsert_freelancer_project(self, project: Any, relevance_score: int | None = None) -> None:
+        now = now_iso()
+        budget = getattr(project, "budget", None)
+        employer = getattr(getattr(project, "employer", None), "name", None)
+        self.con.execute(
+            """
+            INSERT INTO freelancer_projects(project_id, url, title, employer, budget_json, first_seen_at, last_seen_at, relevance_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(project_id) DO UPDATE SET
+                url=excluded.url,
+                title=excluded.title,
+                employer=excluded.employer,
+                budget_json=excluded.budget_json,
+                last_seen_at=excluded.last_seen_at,
+                relevance_score=COALESCE(excluded.relevance_score, freelancer_projects.relevance_score)
+            """,
+            (
+                project.id,
+                project.url,
+                project.title,
+                employer,
+                budget.model_dump_json() if budget and hasattr(budget, "model_dump_json") else json.dumps(budget, ensure_ascii=False),
+                now,
+                now,
+                relevance_score,
+            ),
+        )
+        self.con.execute(
+            "INSERT INTO freelancer_project_snapshots(project_id, captured_at, payload_json) VALUES (?, ?, ?)",
+            (project.id, now, project.model_dump_json() if hasattr(project, "model_dump_json") else json.dumps(project, ensure_ascii=False)),
+        )
+        self.con.commit()
+
+    def has_submitted_freelancer_bid(self, project_id: str) -> bool:
+        row = self.con.execute("SELECT 1 FROM freelancer_submitted_bids WHERE project_id=?", (project_id,)).fetchone()
+        return bool(row)
+
+    def save_freelancer_bid_draft(self, project_id: str, text: str, bid_amount: float | None, delivery_days: int | None) -> None:
+        self.con.execute(
+            """
+            INSERT INTO freelancer_bid_drafts(project_id, text, bid_amount, delivery_days, saved_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(project_id) DO UPDATE SET
+                text=excluded.text,
+                bid_amount=excluded.bid_amount,
+                delivery_days=excluded.delivery_days,
+                saved_at=excluded.saved_at
+            """,
+            (project_id, text, bid_amount, delivery_days, now_iso()),
+        )
+        self.con.commit()
+
+    def get_freelancer_bid_draft(self, project_id: str) -> dict[str, Any] | None:
+        row = self.con.execute("SELECT * FROM freelancer_bid_drafts WHERE project_id=?", (project_id,)).fetchone()
+        return dict(row) if row else None
+
+    def record_freelancer_bid(self, project_id: str, text: str, bid_amount: float | None, delivery_days: int | None, bid_id: str | None = None) -> None:
+        self.con.execute(
+            """
+            INSERT INTO freelancer_submitted_bids(project_id, bid_id, text, bid_amount, delivery_days, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(project_id) DO UPDATE SET
+                bid_id=excluded.bid_id,
+                text=excluded.text,
+                bid_amount=excluded.bid_amount,
+                delivery_days=excluded.delivery_days,
+                submitted_at=excluded.submitted_at
+            """,
+            (project_id, bid_id, text, bid_amount, delivery_days, now_iso()),
+        )
+        self.con.execute("UPDATE freelancer_projects SET submitted=1 WHERE project_id=?", (project_id,))
+        self.con.commit()

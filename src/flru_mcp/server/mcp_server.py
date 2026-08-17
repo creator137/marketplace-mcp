@@ -17,6 +17,11 @@ from flru_mcp.flru.customer import CustomerService
 from flru_mcp.flru.messages import MessageService
 from flru_mcp.flru.projects import ProjectService
 from flru_mcp.flru.proposals import ProposalService
+from flru_mcp.freelancer.bids import FreelancerBidService
+from flru_mcp.freelancer.browser import FreelancerBrowser
+from flru_mcp.freelancer.client import FreelancerClient
+from flru_mcp.freelancer.matcher import FreelancerMatcher
+from flru_mcp.freelancer.projects import FreelancerProjectService
 from flru_mcp.services.project_matcher import ProjectMatcher
 from flru_mcp.services.proposal_drafter import proposal_context
 from flru_mcp.storage.database import connect
@@ -37,6 +42,11 @@ proposal_service = ProposalService(settings, client, project_service, repo)
 message_service = MessageService()
 customer_service = CustomerService(client)
 avito_service = AvitoAdService(settings, AvitoApiClient(settings), AvitoBrowser(settings), repo)
+freelancer_client = FreelancerClient(settings)
+freelancer_projects = FreelancerProjectService(freelancer_client)
+freelancer_browser = FreelancerBrowser(settings)
+freelancer_matcher = FreelancerMatcher(load_expertise_profile(settings.expertise_profile))
+freelancer_bids = FreelancerBidService(settings, freelancer_browser, freelancer_projects, repo)
 
 mcp = FastMCP("marketplace-mcp")
 
@@ -241,6 +251,91 @@ async def avito_open_create_ad_page(headless: bool = False) -> dict:
 async def avito_publish_ad(draft_id: str, confirm: bool = False) -> dict:
     """Explicit high-impact action for publishing an Avito draft. Defaults to dry-run and never bypasses Avito checks."""
     return await avito_service.publish_ad(draft_id=draft_id, confirm=confirm)
+
+
+@mcp.tool()
+async def freelancer_auth_status() -> dict:
+    """Checks whether the current Freelancer.com browser session is authenticated."""
+    return await freelancer_browser.auth_status()
+
+
+@mcp.tool()
+async def freelancer_login(headless: bool = False) -> dict:
+    """Opens Freelancer.com login in Playwright. CAPTCHA/2FA/email checks must be completed manually."""
+    return await freelancer_browser.login(headless=headless)
+
+
+@mcp.tool()
+async def freelancer_list_projects(page: int = 1, limit: int = 20, query: str | None = None, skill: str | None = None) -> dict:
+    """Lists Freelancer.com projects from public job pages."""
+    projects = await freelancer_projects.list_projects(page=page, limit=limit, query=query, skill=skill)
+    for project in projects:
+        repo.upsert_freelancer_project(project)
+    return {"projects": dump(projects)}
+
+
+@mcp.tool()
+async def freelancer_search_projects(query: str, page: int = 1, limit: int = 50) -> dict:
+    """Searches Freelancer.com projects by free text."""
+    return await freelancer_list_projects(page=page, limit=limit, query=query)
+
+
+@mcp.tool()
+async def freelancer_get_project(project_id: str | None = None, url: str | None = None) -> dict:
+    """Gets one Freelancer.com project detail page."""
+    project = await freelancer_projects.get_project(project_id=project_id, url=url)
+    repo.upsert_freelancer_project(project)
+    return dump(project)
+
+
+@mcp.tool()
+async def freelancer_find_relevant_projects(limit: int = 20, min_score: int = 60, max_pages: int = 2) -> dict:
+    """Finds relevant Freelancer.com projects using deterministic stack matching."""
+    results = []
+    skills = [None, "php", "python", "laravel", "api", "crm", "ai", "golang"]
+    for skill in skills:
+        for page in range(1, max_pages + 1):
+            projects = await freelancer_projects.list_projects(page=page, limit=50, skill=skill)
+            for project in projects:
+                if repo.has_submitted_freelancer_bid(project.id):
+                    continue
+                match = freelancer_matcher.score(project)
+                repo.upsert_freelancer_project(project, relevance_score=match.score)
+                if match.score >= min_score:
+                    results.append(match)
+    results.sort(key=lambda item: item.score, reverse=True)
+    return {"projects": dump(results[:limit])}
+
+
+@mcp.tool()
+async def freelancer_get_bid_context(project_id: str | None = None, url: str | None = None) -> dict:
+    """Returns project details and known bid constraints for drafting a Freelancer.com bid."""
+    return await freelancer_bids.context(project_id=project_id, url=url)
+
+
+@mcp.tool()
+async def freelancer_save_bid_draft(project_id: str, text: str, bid_amount: float | None = None, delivery_days: int | None = None) -> dict:
+    """Stores a local Freelancer.com bid draft without submitting it."""
+    repo.save_freelancer_bid_draft(project_id, text, bid_amount, delivery_days)
+    return {"success": True, "project_id": project_id}
+
+
+@mcp.tool()
+async def freelancer_get_bid_draft(project_id: str) -> dict:
+    """Gets a local Freelancer.com bid draft."""
+    return {"draft": repo.get_freelancer_bid_draft(project_id)}
+
+
+@mcp.tool()
+async def freelancer_submit_bid(
+    project_id: str,
+    text: str,
+    bid_amount: float | None = None,
+    delivery_days: int | None = None,
+    confirm: bool = False,
+) -> dict:
+    """Explicit high-impact action for Freelancer.com bidding. Defaults to dry-run until the live form is verified."""
+    return await freelancer_bids.submit(project_id=project_id, text=text, bid_amount=bid_amount, delivery_days=delivery_days, confirm=confirm)
 
 
 def main() -> None:

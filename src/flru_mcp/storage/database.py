@@ -66,6 +66,43 @@ CREATE TABLE IF NOT EXISTS avito_published_ads (
     payload_json TEXT NOT NULL,
     published_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS freelancer_projects (
+    project_id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    title TEXT NOT NULL,
+    employer TEXT,
+    budget_json TEXT,
+    first_seen_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL,
+    inspected INTEGER NOT NULL DEFAULT 0,
+    relevance_score INTEGER,
+    submitted INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS freelancer_project_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL,
+    captured_at TEXT NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS freelancer_bid_drafts (
+    project_id TEXT PRIMARY KEY,
+    text TEXT NOT NULL,
+    bid_amount REAL,
+    delivery_days INTEGER,
+    saved_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS freelancer_submitted_bids (
+    project_id TEXT PRIMARY KEY,
+    bid_id TEXT,
+    text TEXT NOT NULL,
+    bid_amount REAL,
+    delivery_days INTEGER,
+    submitted_at TEXT NOT NULL
+);
 """
 
 
